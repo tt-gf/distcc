@@ -133,12 +133,16 @@ b
     self.assertEqual(parse_file_obj.Parse(
       "test_data/more_macros.c", symbol_table),
       ([], [], ['TEMPLATE_VARNAME(foo)'], []))
-    self.assertEqual(symbol_table.keys(),
-                     ['ILLFORMED', 'AS_STRING_INTERNAL',
-                      'TEMPLATE_VARNAME', 'AS_STRING'])
+    self.assertEqual(set(symbol_table.keys()),
+                     set(['ILLFORMED', 'AS_STRING_INTERNAL',
+                          'TEMPLATE_VARNAME', 'AS_STRING', 'CAT', 'foo']))
     [([arg], val)] = symbol_table['TEMPLATE_VARNAME']
     self.assertEqual(arg, '_filename_')
     self.assertEqual(val, 'AS_STRING(maps/_filename_.tpl.varnames.h)')
+
+    [(args, defn)] = symbol_table['CAT']
+    self.assertEqual(args, ['a', 'b', 'c'])
+    self.assertEqual(defn, "a ## b ## c")
 
     self.assertEqual(parse_file_obj.Parse(
       "test_data/computed_includes.c", symbol_table),
