@@ -127,6 +127,14 @@ COMMENT_RE = re.compile(r"((?!/[*]|//).)*")
 # FOR SEARCHING AFTER /* .. */.
 PAIRED_COMMENT_RE = re.compile(r"(/[*].*?[*]/)")
 
+# Fixed macro definitions
+# TODO: Make these configurable at runtime, perhaps by parsing an override file?
+OVERRIDE_MACROS = {
+  "BOOST_PP_CAT" : [ ( ['a', 'b'], "a ## b" ) ],
+  "BOOST_PP_STRINGIZE" : [ ( ['text'], "#text" ) ],
+  "BOOST_PP_ITERATE": [ ( [], "BOOST_PP_FILENAME_1" ), ( [], "BOOST_PP_FILENAME_2" ) ],
+  "BOOST_MPL_CFG_COMPILER_DIR" : [ "gcc" ]
+}
 
 def InsertMacroDefInTable(lhs, rhs, symbol_table, callback_function):
   """Insert the definition of a pair (lhs, rhs) into symbol table.
@@ -141,26 +149,32 @@ def InsertMacroDefInTable(lhs, rhs, symbol_table, callback_function):
   if m_expr.end(0) != len(lhs):
     raise NotCoveredError(
       "Unexpected macro definition with LHS: '%s'." % lhs)
-  # Calculate the definition df, either
-  # - a pair ([arg_1, .., arg_n], rhs) where arg_i is the
-  #   i'th formal parameter (function-like macro definition), or
-  # - just a symbol (object-like macro definition)
-  if m_expr.group('args') != None:  # perhaps ''
-    # A function-like macro definition.
-    # Construct pair (list of formal parameters, rhs).
-    args = [param.strip() for param in m_expr.group('args').split(',')]
-    df = args, rhs
-    # lhs is adjusted to be just the 'function' name
+  if m_expr.group('symbol') in OVERRIDE_MACROS:
     lhs = m_expr.group('symbol')
-  else: # m_expr.group('args')
-    # An object-like macro definition
-    assert m_expr.group('symbol') == lhs
-    df = rhs
-  if lhs not in symbol_table:
-    symbol_table[lhs] = [df]
+    if lhs not in symbol_table:
+      symbol_table[lhs] = OVERRIDE_MACROS[lhs]
+      callback_function(lhs)
   else:
-    symbol_table[lhs].append(df)
-  callback_function(lhs)
+    # Calculate the definition df, either
+    # - a pair ([arg_1, .., arg_n], rhs) where arg_i is the
+    #   i'th formal parameter (function-like macro definition), or
+    # - just a symbol (object-like macro definition)
+    if m_expr.group('args') != None:  # perhaps ''
+      # A function-like macro definition.
+      # Construct pair (list of formal parameters, rhs).
+      args = [param.strip() for param in m_expr.group('args').split(',')]
+      df = args, rhs
+      # lhs is adjusted to be just the 'function' name
+      lhs = m_expr.group('symbol')
+    else: # m_expr.group('args')
+      # An object-like macro definition
+      assert m_expr.group('symbol') == lhs
+      df = rhs
+    if lhs not in symbol_table:
+      symbol_table[lhs] = [df]
+    else:
+      symbol_table[lhs].append(df)
+    callback_function(lhs)
 
 
 class ParseFile(object):

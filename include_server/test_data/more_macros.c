@@ -13,4 +13,6 @@
 
 #define MULTI(a, b, c) a + b + c
 
+#define BOOST_PP_CAT(a, b) BOOST_PP_CAT_I(a, b)
+
 #include TEMPLATE_VARNAME(foo)

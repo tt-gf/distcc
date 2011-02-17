@@ -134,7 +134,7 @@ b
       "test_data/more_macros.c", symbol_table),
       ([], [], ['TEMPLATE_VARNAME(foo)'], []))
     self.assertEqual(set(symbol_table.keys()),
-                     set(['ILLFORMED', 'AS_STRING_INTERNAL',
+                     set(['ILLFORMED', 'AS_STRING_INTERNAL', 'BOOST_PP_CAT',
                           'TEMPLATE_VARNAME', 'AS_STRING', 'MULTI']))
     [([arg], val)] = symbol_table['TEMPLATE_VARNAME']
     self.assertEqual(arg, '_filename_')
@@ -143,6 +143,10 @@ b
     [(args, defn)] = symbol_table['MULTI']
     self.assertEqual(args, ['a', 'b', 'c'])
     self.assertEqual(defn, "a + b + c")
+
+    self.assertEqual(
+      symbol_table['BOOST_PP_CAT'],
+      [parse_file.OVERRIDE_MACROS['BOOST_PP_CAT']])
 
     self.assertEqual(parse_file_obj.Parse(
       "test_data/computed_includes.c", symbol_table),
