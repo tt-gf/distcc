@@ -132,8 +132,14 @@ PAIRED_COMMENT_RE = re.compile(r"(/[*].*?[*]/)")
 OVERRIDE_MACROS = {
   "BOOST_PP_CAT" : [ ( ['a', 'b'], "a ## b" ) ],
   "BOOST_PP_STRINGIZE" : [ ( ['text'], "#text" ) ],
-  "BOOST_PP_ITERATE": [ ( [], "BOOST_PP_FILENAME_1" ), ( [], "BOOST_PP_FILENAME_2" ) ],
-  "BOOST_MPL_CFG_COMPILER_DIR" : [ "gcc" ]
+  "BOOST_PP_ITERATE": [ ( [], "BOOST_PP_FILENAME_1" ), ( [], "BOOST_PP_FILENAME_2" ), \
+                          ( [], "BOOST_PP_TUPLE_ELEM_3_2(BOOST_PP_TUPLE_ELEM_2_1(BOOST_PP_ITERATION_PARAMS_1))") ],
+  "AUX778076_PREPROCESSED_HEADER" : [ "BOOST_MPL_CFG_COMPILER_DIR/BOOST_MPL_PREPROCESSED_HEADER" ],
+  "AUX778076_INCLUDE_STRING" : [ "" ],
+  "BOOST_MPL_CFG_COMPILER_DIR" : [ "gcc" ],
+  "BOOST_COMPILER_CONFIG" : [ "boost/config/compiler/gcc.hpp" ],
+  "BOOST_STDLIB_CONFIG" : [ "boost/config/stdlib/libstdcpp3.hpp"],
+  "BOOST_PLATFORM_CONFIG" : [ "boost/config/platform/macos.hpp" ]
 }
 
 def InsertMacroDefInTable(lhs, rhs, symbol_table, callback_function):
