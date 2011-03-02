@@ -156,6 +156,7 @@ OVERRIDE_MACROS = {
   "BOOST_PP_TUPLE_ELEM" : [ ( ['size', 'index', 'tuple'], "BOOST_PP_TUPLE_ELEM_I(size, index, tuple)" ) ],
   "BOOST_PP_TUPLE_ELEM_I" : [ ( [ 's', 'i', 't' ], "BOOST_PP_TUPLE_ELEM_ ## s ## _ ## i t" ) ],
   "AUX778076_PREPROCESSED_HEADER" : [ "BOOST_MPL_CFG_COMPILER_DIR/BOOST_MPL_PREPROCESSED_HEADER" ],
+  #"AUX778076_INCLUDE_DIR" : [ "typeof_based" ],
   "AUX778076_INCLUDE_STRING" : [ "" ],
   "BOOST_MPL_CFG_COMPILER_DIR" : [ "gcc" ],
   "BOOST_COMPILER_CONFIG" : [ "boost/config/compiler/gcc.hpp" ],
@@ -388,7 +389,7 @@ def _EvalExprHelper(expr, symbol_table, disabled):
           expr, symbol, args_list, expr[:match.start()])
     if symbol in OVERRIDE_MACROS:
       Debug(DEBUG_TRACE2, "_EvalExprHelper macro override, symbol: %s", symbol)
-      symbol_table[symbol] = OVERRIDE_MACROS[symbol]
+      symbol_table[symbol][:] = OVERRIDE_MACROS[symbol]
     if symbol not in symbol_table:
       # Process rest of string recursively.
       return _PrependToSet(expr[:match.end()],
@@ -399,13 +400,11 @@ def _EvalExprHelper(expr, symbol_table, disabled):
       # Now consider the set of meanings of this symbol.  But first
       # note that the string remaining unexpanded is always a
       # possibility, because we are doing a "forall" analysis.
-
       defs = symbol_table[symbol]
       if isinstance(defs[0], str):
         value_set = set([expr])
       else:
         value_set = set()
-
       # Now carry out substitution on expr[match.start():match.end()],
       # the whole stretch of expr that consists of symbol and possibly
       # args with parentheses.
