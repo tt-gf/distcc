@@ -241,7 +241,6 @@ def _MassageAccordingToPoundSigns(string):
   """Perform 'stringification (#) and concatenation (##)."""
   return SINGLE_POUND_RE.sub(r'"\1"', DOUBLE_POUND_RE.sub("", string))
 
-
 # EVALUATION
 
 def _EvalExprHelper(expr, symbol_table, disabled):
@@ -346,6 +345,14 @@ def _EvalExprHelper(expr, symbol_table, disabled):
             for i in range(len(parsed)):
               expansion = _SubstituteSymbolInString(lhs[i], parsed[i], expansion)
             expansions.append(expansion)
+      elif SYMBOL_RE.match(rhs):
+        # For "simple" definitions, we don't need to expand arguments, just substitute directly
+        # (will get expanded inside _ReEvalRecursivelyForExpansion, below)
+        expansion = rhs
+        assert len(lhs) == len(args_list)
+        for i in range(len(lhs)):
+          expansion = _SubstituteSymbolInString(lhs[i], args_list[i], expansion)
+        expansions = [expansion]
       else:
         # Expand arguments recursively.
         args_expand = [ _EvalExprHelper(arg, symbol_table, disabled)
@@ -365,9 +372,10 @@ def _EvalExprHelper(expr, symbol_table, disabled):
 
       Debug(DEBUG_TRACE2, "_EvalMacro: expr: %s, expansions: %s", expr, expansions)
       for expansion in expansions:
-        real_expansion = _MassageAccordingToPoundSigns(expansion)
-        real_after = _MassageAccordingToPoundSigns(expr[args_end:])
-        _ReEvalRecursivelyForExpansion(real_expansion, real_after)
+        _ReEvalRecursivelyForExpansion(
+          _MassageAccordingToPoundSigns(expansion), 
+          _MassageAccordingToPoundSigns(expr[args_end:]))
+        
     else:
       assert False, "Definition '%s' is unexpected." % definition
       
