@@ -146,6 +146,24 @@ DOUBLE_POUND_RE = re.compile(r"\s*##\s*")
 SYMBOL_RE = re.compile(r"\b\w+\b") # \b = word boundary \w = word constituent
 
 
+# Override macro definitions
+# TODO: Make these configurable at runtime, perhaps by parsing an override file?
+OVERRIDE_MACROS = {
+  "BOOST_PP_CAT" : [ ( ['a', 'b'], "a ## b" ) ],
+  "BOOST_PP_STRINGIZE" : [ ( ['text'], "#text" ) ],
+  "BOOST_PP_ITERATE": [ ( [''], "BOOST_PP_TUPLE_ELEM(3, 2, BOOST_PP_TUPLE_ELEM(2, 1, BOOST_PP_ITERATION_PARAMS_1))"),
+                        ( [''], "BOOST_PP_FILENAME_1" ), ( [''], "BOOST_PP_FILENAME_2" ) ],
+  "BOOST_PP_TUPLE_ELEM" : [ ( ['size', 'index', 'tuple'], "BOOST_PP_TUPLE_ELEM_I(size, index, tuple)" ) ],
+  "BOOST_PP_TUPLE_ELEM_I" : [ ( [ 's', 'i', 't' ], "BOOST_PP_TUPLE_ELEM_ ## s ## _ ## i t" ) ],
+  "AUX778076_PREPROCESSED_HEADER" : [ "BOOST_MPL_CFG_COMPILER_DIR/BOOST_MPL_PREPROCESSED_HEADER" ],
+  "AUX778076_INCLUDE_STRING" : [ "" ],
+  "BOOST_MPL_CFG_COMPILER_DIR" : [ "gcc" ],
+  "BOOST_COMPILER_CONFIG" : [ "boost/config/compiler/gcc.hpp" ],
+  "BOOST_STDLIB_CONFIG" : [ "boost/config/stdlib/libstdcpp3.hpp"],
+  #"BOOST_PLATFORM_CONFIG" : [ "boost/config/platform/macos.hpp" ]
+}
+
+
 # HELPER FUNCTIONS
 
 def _BigUnion(list_of_sets):
@@ -309,19 +327,42 @@ def _EvalExprHelper(expr, symbol_table, disabled):
                                # expansion before substitution
       # Verify that the number of formal parameters match the
       # number of actual parameters; otherwise skip.
-      if not args_list or len(lhs) != len(args_list):
+      if not args_list:
         return
-      # Expand arguments recursively.
-      args_expand = [ _EvalExprHelper(arg, symbol_table, disabled)
+      elif len(lhs) != len(args_list):
+        Debug(DEBUG_TRACE2,
+              "_EvalMacro: function-like macro arguments mismatch, lhs: %s\n" +
+              "    args_list: %s\n",
+              lhs, args_list)
+        # TODO: how to handle this?
+        if len(args_list) > 1:
+          return
+        expansions = []
+        for e in _EvalExprHelper(args_list[0], symbol_table, disabled):
+          parsed = _ParseArgs(e, 0)[0]
+          if parsed and len(parsed) == len(lhs):
+            expansion = rhs
+            for i in range(len(parsed)):
+              expansion = _SubstituteSymbolInString(lhs[i], parsed[i], expansion)
+            expansions.append(expansion)
+      else:
+        # Expand arguments recursively.
+        args_expand = [ _EvalExprHelper(arg, symbol_table, disabled)
                         for arg in args_list ]
-      # Do the substitutions. Again, we'll need to piece together
-      # strings from a cross product. In this the fragments come from
-      # the expansions of the arguments.
-      expansions = [rhs]
-      for i in range(len(args_expand)):
-        expansions = [ _SubstituteSymbolInString(lhs[i], arg, expansion)
-                       for expansion in expansions
-                       for arg in args_expand[i] ]
+        Debug(DEBUG_TRACE2,
+              "_EvalMacro: expr: %s\n" +
+              "    args_expand: %s\n",
+              expr, args_expand)
+        # Do the substitutions. Again, we'll need to piece together
+        # strings from a cross product. In this the fragments come from
+        # the expansions of the arguments.
+        expansions = [rhs]
+        for i in range(len(args_expand)):
+          expansions = [ _SubstituteSymbolInString(lhs[i], arg, expansion)
+                         for expansion in expansions
+                         for arg in args_expand[i] ]
+
+      Debug(DEBUG_TRACE2, "_EvalMacro: expr: %s, expansions: %s", expr, expansions)
       for expansion in expansions:
         real_expansion = _MassageAccordingToPoundSigns(expansion)
         real_after = _MassageAccordingToPoundSigns(expr[args_end:])
@@ -345,6 +386,9 @@ def _EvalExprHelper(expr, symbol_table, disabled):
           "    symbol:     %s\n    args_list:       %s\n" +
           "    before: %s\n",
           expr, symbol, args_list, expr[:match.start()])
+    if symbol in OVERRIDE_MACROS:
+      Debug(DEBUG_TRACE2, "_EvalExprHelper macro override, symbol: %s", symbol)
+      symbol_table[symbol] = OVERRIDE_MACROS[symbol]
     if symbol not in symbol_table:
       # Process rest of string recursively.
       return _PrependToSet(expr[:match.end()],

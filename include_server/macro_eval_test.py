@@ -146,6 +146,17 @@ class MacroEvalTest(unittest.TestCase):
       set(["cfgdir/abc.h", "cfg1/abc.h", "cfg2/abc.h", "cfg3/abc.h",
            "cfgdir/hdrfile", "cfg1/hdrfile", "cfg2/hdrfile", "cfg3/hdrfile"]))
 
+    # special case of n-arity function macro called with macro returning n-tuple
+    self.assertEqual(
+      macro_eval.EvalExpression(
+        "CAT(CFGPATH)##hdrfile",
+        { "CAT" : [ ( ['a','b'], "a ## b" ) ],
+          "CFGPATH" : [ "TUPLE_2(cfgdir, /)" ],
+          "TUPLE_2" : [ ( ['a','b'], "(a, b)" ) ],
+          "cfgdir" : [ "cfg1" ],
+          "hdrfile" : [ "abc.h" ] } ),
+      set(["cfgdir/abc.h", "cfg1/abc.h", "cfgdir/hdrfile", "cfg1/hdrfile" ]))
+
     # The ## operator only works in rhs of function-like macros. Check
     # that it doesn't work stand-alone.
     self.assertEqual(

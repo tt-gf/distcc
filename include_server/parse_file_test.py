@@ -144,10 +144,6 @@ b
     self.assertEqual(args, ['a', 'b', 'c'])
     self.assertEqual(defn, "a + b + c")
 
-    self.assertEqual(
-      symbol_table['BOOST_PP_CAT'],
-      [parse_file.OVERRIDE_MACROS['BOOST_PP_CAT']])
-
     self.assertEqual(parse_file_obj.Parse(
       "test_data/computed_includes.c", symbol_table),
       ([],
