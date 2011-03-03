@@ -159,8 +159,8 @@ OVERRIDE_MACROS = {
   #"AUX778076_INCLUDE_DIR" : [ "typeof_based" ],
   "AUX778076_INCLUDE_STRING" : [ "" ],
   "BOOST_MPL_CFG_COMPILER_DIR" : [ "gcc" ],
-  "BOOST_COMPILER_CONFIG" : [ "boost/config/compiler/gcc.hpp" ],
-  "BOOST_STDLIB_CONFIG" : [ "boost/config/stdlib/libstdcpp3.hpp"],
+  #"BOOST_COMPILER_CONFIG" : [ "boost/config/compiler/gcc.hpp" ],
+  #"BOOST_STDLIB_CONFIG" : [ "boost/config/stdlib/libstdcpp3.hpp"],
   #"BOOST_PLATFORM_CONFIG" : [ "boost/config/platform/macos.hpp" ]
 }
 
