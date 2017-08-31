@@ -12,7 +12,7 @@ before_install:
 script:
   - ./autogen.sh
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then ./configure; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then ./configure --without-libiberty --disable-Werror; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then ./configure --without-libiberty; fi
   - make check
 
 matrix:
