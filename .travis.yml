@@ -1,13 +1,28 @@
 language: c
 
 addons:
-    apt:
-        packages:
-            - python3-dev
-            - libiberty-dev
+  apt:
+    packages:
+      - python3-dev
+      - libiberty-dev
 
-before_script: ./autogen.sh
+before_install:
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update; fi
 
 script:
-    - ./configure
-    - make check
+  - ./autogen.sh
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then ./configure; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then ./configure --without-libiberty --disable-Werror; fi
+  - make check
+
+matrix:
+  include:
+  - os: linux
+    compiler: gcc
+    dist: trusty
+  - os: linux
+    compiler: clang
+    dist: trusty
+  - os: osx
+    compiler: clang
+    osx_image: xcode8.2
