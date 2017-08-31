@@ -99,7 +99,6 @@ CPP_OPTIONS_MAYBE_TWO_WORDS = {
   '-MF':            lambda ps, arg: None,
   '-MT':            lambda ps, arg: None,
   '-MQ':            lambda ps, arg: None,
-  '-arch':          lambda ps, arg: None,
   '-target':        lambda ps, arg: None,
   '-include':       lambda ps, arg: ps.include_files.append(arg),
   '-imacros':       lambda ps, arg: ps.include_files.append(arg),
@@ -124,6 +123,7 @@ for key in CPP_OPTIONS_MAYBE_TWO_WORDS.keys():
 # separate word in argv.
 CPP_OPTIONS_ALWAYS_TWO_WORDS = {
   '-Xpreprocessor': lambda ps, arg: _RaiseNotImplemented('-Xpreprocessor'),
+  '-arch':          lambda ps, arg: None,
 
   # In order to parse correctly, this data structure needs to include
   # *all* two-word arguments that gcc accepts (we don't want to see
