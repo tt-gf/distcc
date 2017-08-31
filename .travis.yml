@@ -18,6 +18,8 @@ script:
   - make check
 
 matrix:
+  allow_failures:
+    - compiler: clang
   include:
   - os: linux
     compiler: gcc
