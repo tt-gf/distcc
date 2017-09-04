@@ -1,5 +1,7 @@
 *.o
 *.d
+*.out
+*.err
 # binaries
 distcc
 distccd
