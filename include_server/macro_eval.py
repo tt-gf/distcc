@@ -142,8 +142,27 @@ NotCoveredError = basics.NotCoveredError
 # REGULAR EXPRESSIONS
 
 SINGLE_POUND_RE = re.compile(r"\B#\s*(\S*)") # \B = here: not at end of word
-DOUBLE_POUND_RE = re.compile(r"##")
+DOUBLE_POUND_RE = re.compile(r"\s*##\s*")
 SYMBOL_RE = re.compile(r"\b\w+\b") # \b = word boundary \w = word constituent
+
+
+# Override macro definitions
+# TODO: Make these configurable at runtime, perhaps by parsing an override file?
+OVERRIDE_MACROS = {
+  "BOOST_PP_CAT" : [ ( ['a', 'b'], "a ## b" ) ],
+  "BOOST_PP_STRINGIZE" : [ ( ['text'], "#text" ) ],
+  "BOOST_PP_ITERATE": [ ( [''], "BOOST_PP_TUPLE_ELEM(3, 2, BOOST_PP_TUPLE_ELEM(2, 1, BOOST_PP_ITERATION_PARAMS_1))"),
+                        ( [''], "BOOST_PP_FILENAME_1" ), ( [''], "BOOST_PP_FILENAME_2" ) ],
+  "BOOST_PP_TUPLE_ELEM" : [ ( ['size', 'index', 'tuple'], "BOOST_PP_TUPLE_ELEM_I(size, index, tuple)" ) ],
+  "BOOST_PP_TUPLE_ELEM_I" : [ ( [ 's', 'i', 't' ], "BOOST_PP_TUPLE_ELEM_ ## s ## _ ## i t" ) ],
+  "AUX778076_PREPROCESSED_HEADER" : [ "BOOST_MPL_CFG_COMPILER_DIR/BOOST_MPL_PREPROCESSED_HEADER" ],
+  #"AUX778076_INCLUDE_DIR" : [ "typeof_based" ],
+  "AUX778076_INCLUDE_STRING" : [ "" ],
+  "BOOST_MPL_CFG_COMPILER_DIR" : [ "gcc" ],
+  #"BOOST_COMPILER_CONFIG" : [ "boost/config/compiler/gcc.hpp" ],
+  #"BOOST_STDLIB_CONFIG" : [ "boost/config/stdlib/libstdcpp3.hpp"],
+  #"BOOST_PLATFORM_CONFIG" : [ "boost/config/platform/macos.hpp" ]
+}
 
 
 # HELPER FUNCTIONS
@@ -184,6 +203,8 @@ def _ParseArgs(string, pos):
   # occurrences are deemed unlikely at this moment. Fix that so that parentheses
   # inside single quotes are ignored.
   open_parens = 0
+  while pos < len(string) and string[pos].isspace():
+    pos += 1
   if not pos < len(string) or string[pos] != '(':
     return (None, pos)
   # Prepare a list of comma and extremal positions.  The '(' at the left is the
@@ -212,14 +233,13 @@ def _ParseArgs(string, pos):
   commas.append(pos_end)  # the other extremal position
   args_list = []
   for i in range(len(commas) - 1):
-    args_list.append(string[commas[i] + 1 : commas[i + 1]])
+    args_list.append(string[commas[i] + 1 : commas[i + 1]].lstrip())
   return (args_list, pos_end + 1)
 
 
 def _MassageAccordingToPoundSigns(string):
   """Perform 'stringification (#) and concatenation (##)."""
   return SINGLE_POUND_RE.sub(r'"\1"', DOUBLE_POUND_RE.sub("", string))
-
 
 # EVALUATION
 
@@ -290,13 +310,13 @@ def _EvalExprHelper(expr, symbol_table, disabled):
 
     Here definition is either object-like or function-like.
     """
-    # Consider that this symbol goes unevaluated.
-    value_set.update(
-      _PrependToSet(expr[:match.end()],
-                   _EvalExprHelper(expr[match.end():],
-                                   symbol_table,
-                                   disabled)))
     if isinstance(definition, str):
+      # Consider that this symbol goes unevaluated.
+      value_set.update(
+        _PrependToSet(expr[:match.end()],
+                      _EvalExprHelper(expr[match.end():],
+                                      symbol_table,
+                                      disabled)))
       # The expansion is the definition.
       _ReEvalRecursivelyForExpansion(definition, expr[match.end():])
     elif isinstance(definition, tuple):
@@ -307,22 +327,55 @@ def _EvalExprHelper(expr, symbol_table, disabled):
                                # expansion before substitution
       # Verify that the number of formal parameters match the
       # number of actual parameters; otherwise skip.
-      if not args_list or len(lhs) != len(args_list):
+      if not args_list:
         return
-      # Expand arguments recursively.
-      args_expand = [ _EvalExprHelper(arg, symbol_table, disabled)
+      elif len(lhs) != len(args_list):
+        Debug(DEBUG_TRACE2,
+              "_EvalMacro: function-like macro arguments mismatch, lhs: %s\n" +
+              "    args_list: %s\n",
+              lhs, args_list)
+        # TODO: how to handle this?
+        if len(args_list) > 1:
+          return
+        expansions = []
+        for e in _EvalExprHelper(args_list[0], symbol_table, disabled):
+          parsed = _ParseArgs(e, 0)[0]
+          if parsed and len(parsed) == len(lhs):
+            expansion = rhs
+            for i in range(len(parsed)):
+              expansion = _SubstituteSymbolInString(lhs[i], parsed[i], expansion)
+            expansions.append(expansion)
+      elif SYMBOL_RE.match(rhs):
+        # For "simple" definitions, we don't need to expand arguments, just substitute directly
+        # (will get expanded inside _ReEvalRecursivelyForExpansion, below)
+        expansion = rhs
+        assert len(lhs) == len(args_list)
+        for i in range(len(lhs)):
+          expansion = _SubstituteSymbolInString(lhs[i], args_list[i], expansion)
+        expansions = [expansion]
+      else:
+        # Expand arguments recursively.
+        args_expand = [ _EvalExprHelper(arg, symbol_table, disabled)
                         for arg in args_list ]
-      # Do the substitutions. Again, we'll need to piece together
-      # strings from a cross product. In this the fragments come from
-      # the expansions of the arguments.
-      expansions = [rhs]
-      for i in range(len(args_expand)):
-        expansions = [ _SubstituteSymbolInString(lhs[i], arg, expansion)
-                       for expansion in expansions
-                       for arg in args_expand[i] ]
+        Debug(DEBUG_TRACE2,
+              "_EvalMacro: expr: %s\n" +
+              "    args_expand: %s\n",
+              expr, args_expand)
+        # Do the substitutions. Again, we'll need to piece together
+        # strings from a cross product. In this the fragments come from
+        # the expansions of the arguments.
+        expansions = [rhs]
+        for i in range(len(args_expand)):
+          expansions = [ _SubstituteSymbolInString(lhs[i], arg, expansion)
+                         for expansion in expansions
+                         for arg in args_expand[i] ]
+
+      Debug(DEBUG_TRACE2, "_EvalMacro: expr: %s, expansions: %s", expr, expansions)
       for expansion in expansions:
-        real_expansion = _MassageAccordingToPoundSigns(expansion)
-        _ReEvalRecursivelyForExpansion(real_expansion, expr[args_end:])
+        _ReEvalRecursivelyForExpansion(
+          _MassageAccordingToPoundSigns(expansion), 
+          _MassageAccordingToPoundSigns(expr[args_end:]))
+        
     else:
       assert False, "Definition '%s' is unexpected." % definition
 
@@ -342,6 +395,9 @@ def _EvalExprHelper(expr, symbol_table, disabled):
           "    symbol:     %s\n    args_list:       %s\n" +
           "    before: %s\n",
           expr, symbol, args_list, expr[:match.start()])
+    if symbol in OVERRIDE_MACROS:
+      Debug(DEBUG_TRACE2, "_EvalExprHelper macro override, symbol: %s", symbol)
+      symbol_table[symbol][:] = OVERRIDE_MACROS[symbol]
     if symbol not in symbol_table:
       # Process rest of string recursively.
       return _PrependToSet(expr[:match.end()],
@@ -352,12 +408,16 @@ def _EvalExprHelper(expr, symbol_table, disabled):
       # Now consider the set of meanings of this symbol.  But first
       # note that the string remaining unexpanded is always a
       # possibility, because we are doing a "forall" analysis.
-      value_set = set([expr])
+      defs = symbol_table[symbol]
+      if isinstance(defs[0], str):
+        value_set = set([expr])
+      else:
+        value_set = set()
       # Now carry out substitution on expr[match.start():match.end()],
       # the whole stretch of expr that consists of symbol and possibly
       # args with parentheses.
       if symbol not in disabled:
-        defs = symbol_table[symbol]
+        #defs = symbol_table[symbol]
         for definition in defs:
           _EvalMacro(definition, disabled)
       return value_set

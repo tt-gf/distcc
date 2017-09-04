@@ -127,7 +127,6 @@ COMMENT_RE = re.compile(r"((?!/[*]|//).)*")
 # FOR SEARCHING AFTER /* .. */.
 PAIRED_COMMENT_RE = re.compile(r"(/[*].*?[*]/)")
 
-
 def InsertMacroDefInTable(lhs, rhs, symbol_table, callback_function):
   """Insert the definition of a pair (lhs, rhs) into symbol table.
 
@@ -148,7 +147,7 @@ def InsertMacroDefInTable(lhs, rhs, symbol_table, callback_function):
   if m_expr.group('args') != None:  # perhaps ''
     # A function-like macro definition.
     # Construct pair (list of formal parameters, rhs).
-    args = m_expr.group('args').split(',')
+    args = [param.strip() for param in m_expr.group('args').split(',')]
     df = args, rhs
     # lhs is adjusted to be just the 'function' name
     lhs = m_expr.group('symbol')
