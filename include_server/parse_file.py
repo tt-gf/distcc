@@ -127,6 +127,10 @@ COMMENT_RE = re.compile(r"((?!/[*]|//).)*")
 # FOR SEARCHING AFTER /* .. */.
 PAIRED_COMMENT_RE = re.compile(r"(/[*].*?[*]/)")
 
+SKIP_PP_IF_INCLUDE_CONTAINS = [
+#  "preprocessor"
+]
+
 def InsertMacroDefInTable(lhs, rhs, symbol_table, callback_function):
   """Insert the definition of a pair (lhs, rhs) into symbol table.
 
@@ -268,6 +272,9 @@ class ParseFile(object):
       list of expressions.
     """
     Debug(DEBUG_TRACE, "ParseFile %s", filepath)
+
+    if any(key in filepath for key in SKIP_PP_IF_INCLUDE_CONTAINS):
+        raise NotCoveredError("Header '%s' skipped by filter %s" % (filepath, SKIP_PP_IF_INCLUDE_CONTAINS))
 
     assert isinstance(filepath, str)
     self.filepath = filepath

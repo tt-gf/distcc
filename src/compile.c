@@ -177,7 +177,7 @@ static int dcc_note_discrepancy(const char *discrepancy_filename)
     /* The file position is a property of the stream, so we are
     assured that exactly one process will take the 'if' branch when
     max_discrepancies_before_demotion failures is reached. */
-    if (ftell(discrepancy_file) == 
+    if (ftell(discrepancy_file) ==
         (long int)dcc_get_max_discrepancies_before_demotion()) {
         rs_log_warning("now using plain distcc, possibly due to "
                        "inconsistent file system changes during build");
@@ -588,12 +588,14 @@ dcc_build_somewhere(char *argv[],
              */
             rs_log_warning("failed to get includes from include server, "
                            "preprocessing locally");
+            host->mode = DCC_MODE_LOCAL;
             if (dcc_getenv_bool("DISTCC_TESTING_INCLUDE_SERVER", 0))
                 dcc_exit(ret);
             host->cpp_where = DCC_CPP_ON_CLIENT;
             dcc_get_protover_from_features(host->compr,
                                            host->cpp_where,
                                            &host->protover);
+            goto run_local;
         } else {
             /* Include server succeeded. */
             /* We're done with local "preprocessing" (include scanning). */

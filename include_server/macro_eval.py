@@ -373,9 +373,9 @@ def _EvalExprHelper(expr, symbol_table, disabled):
       Debug(DEBUG_TRACE2, "_EvalMacro: expr: %s, expansions: %s", expr, expansions)
       for expansion in expansions:
         _ReEvalRecursivelyForExpansion(
-          _MassageAccordingToPoundSigns(expansion), 
+          _MassageAccordingToPoundSigns(expansion),
           _MassageAccordingToPoundSigns(expr[args_end:]))
-        
+
     else:
       assert False, "Definition '%s' is unexpected." % definition
 
@@ -397,6 +397,7 @@ def _EvalExprHelper(expr, symbol_table, disabled):
           expr, symbol, args_list, expr[:match.start()])
     if symbol in OVERRIDE_MACROS:
       Debug(DEBUG_TRACE2, "_EvalExprHelper macro override, symbol: %s", symbol)
+      raise NotCoveredError("Skipping pump mode for symbol %s" % symbol)
       symbol_table[symbol][:] = OVERRIDE_MACROS[symbol]
     if symbol not in symbol_table:
       # Process rest of string recursively.
