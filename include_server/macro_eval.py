@@ -145,6 +145,21 @@ SINGLE_POUND_RE = re.compile(r"\B#\s*(\S*)") # \B = here: not at end of word
 DOUBLE_POUND_RE = re.compile(r"##")
 SYMBOL_RE = re.compile(r"\b\w+\b") # \b = word boundary \w = word constituent
 
+SKIP_SYMBOLS = {
+  "BOOST_PP_CAT",
+  "BOOST_PP_STRINGIZE",
+  "BOOST_PP_STRINGIZE_I",
+  "BOOST_PP_ITERATE",
+  "BOOST_PP_TUPLE_ELEM",
+  "BOOST_PP_TUPLE_ELEM_I",
+  "AUX778076_PREPROCESSED_HEADER",
+  "AUX778076_INCLUDE_DIR",
+  "AUX778076_INCLUDE_STRING",
+  "BOOST_MPL_CFG_COMPILER_DIR",
+  "BOOST_COMPILER_CONFIG",
+  "BOOST_STDLIB_CONFIG",
+  "BOOST_PLATFORM_CONFIG"
+}
 
 # HELPER FUNCTIONS
 
@@ -342,6 +357,8 @@ def _EvalExprHelper(expr, symbol_table, disabled):
           "    symbol:     %s\n    args_list:       %s\n" +
           "    before: %s\n",
           expr, symbol, args_list, expr[:match.start()])
+    if symbol in SKIP_SYMBOLS:
+        raise NotCoveredError("Skipping analysis. Unsupported symbol '%s'" % symbol)
     if symbol not in symbol_table:
       # Process rest of string recursively.
       return _PrependToSet(expr[:match.end()],

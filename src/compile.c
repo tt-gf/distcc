@@ -588,6 +588,11 @@ dcc_build_somewhere(char *argv[],
              */
             rs_log_warning("failed to get includes from include server, "
                            "preprocessing locally");
+            if (dcc_getenv_bool("DISTCC_LOCAL_CPP", 1)) {
+              host->mode = DCC_MODE_LOCAL;
+              goto run_local;
+            }
+
             if (dcc_getenv_bool("DISTCC_TESTING_INCLUDE_SERVER", 0))
                 dcc_exit(ret);
             host->cpp_where = DCC_CPP_ON_CLIENT;
